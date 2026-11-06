@@ -8,6 +8,7 @@ Usage:
     venv/bin/python3 fill_diary.py
 """
 
+import re
 import time
 import openpyxl
 from datetime import datetime
@@ -19,7 +20,7 @@ from playwright.sync_api import sync_playwright
 EXCEL_FILE = "INT Diary Entries_2026-27.xlsx"
 FIREFOX_PROFILE_DIR = "/home/ganeshak11/ScratchPad/.firefox_profile"
 
-FILL_FROM_DATE  = datetime(2026, 9, 1)
+FILL_FROM_DATE  = datetime(2026, 8, 17)
 FILL_UNTIL_DATE = datetime(2026, 10, 31)
 
 DELAY_BETWEEN_ENTRIES = 1.5
@@ -37,60 +38,64 @@ DEFAULT_LEARNINGS = (
 #  PER-MODULE SKILL MAPPING
 # ─────────────────────────────────────────────
 MODULE_SKILLS = {
-    "AI & ML Foundations":              ["Python", "Machine learning", "AI", "Git"],
-    "Generative AI Foundations":        ["Python", "Generative ai", "AI", "Git"],
-    "Generative Models":                ["Python", "Generative ai", "ML", "TensorFlow", "Git"],
-    "Math Foundations":                 ["Python", "Statistical analysis", "Numpy", "Git"],
-    "Deep Learning Foundations":        ["Python", "TensorFlow", "Keras", "ML", "Git"],
-    "CNNs":                             ["Python", "TensorFlow", "Keras", "computer vision", "Git"],
-    "Sequence Models":                  ["Python", "TensorFlow", "Keras", "Natural language processing", "Git"],
-    "Deep Learning Tools":              ["Python", "TensorFlow", "PyTorch", "Keras", "Git"],
-    "Deep Learning Practice":           ["Python", "TensorFlow", "Keras", "ML", "Git"],
-    "Deep Learning Assessment":         ["Python", "TensorFlow", "PyTorch", "ML", "Git"],
-    "VAE Foundations":                  ["Python", "TensorFlow", "Keras", "ML", "Git"],
-    "VAE":                              ["Python", "TensorFlow", "Keras", "Generative ai", "Git"],
-    "VAE Applications":                 ["Python", "TensorFlow", "Generative ai", "Git"],
-    "VAE Security Applications":        ["Python", "TensorFlow", "ML", "Git"],
-    "VAE Tools":                        ["Python", "TensorFlow", "PyTorch", "Git"],
-    "VAE Assessment":                   ["Python", "TensorFlow", "ML", "Git"],
-    "GAN Foundations":                  ["Python", "TensorFlow", "Keras", "Generative ai", "Git"],
-    "GAN Training":                     ["Python", "TensorFlow", "Keras", "Generative ai", "Git"],
-    "GANs":                             ["Python", "TensorFlow", "Keras", "Generative ai", "Git"],
-    "GAN Applications":                 ["Python", "TensorFlow", "Generative ai", "computer vision", "Git"],
-    "Transformers":                     ["Python", "TensorFlow", "Natural language processing", "Generative ai", "Git"],
-    "Transformers Assessment":          ["Python", "TensorFlow", "Natural language processing", "Git"],
-    "LLM Foundations":                  ["Python", "Natural language processing", "Generative ai", "AI", "Git"],
-    "LLMs":                             ["Python", "Natural language processing", "Generative ai", "TensorFlow", "Git"],
-    "Hugging Face":                     ["Python", "Natural language processing", "TensorFlow", "Generative ai", "Git"],
-    "Fine-tuning LLMs":                 ["Python", "Natural language processing", "Generative ai", "PyTorch", "Git"],
-    "Prompt Engineering":               ["Python", "Generative ai", "Natural language processing", "AI", "Git"],
-    "RAG Foundations":                  ["Python", "Natural language processing", "Generative ai", "AI", "Git"],
-    "RAG Implementation":               ["Python", "Natural language processing", "Generative ai", "MongoDB", "Git"],
-    "Vector Databases":                 ["Python", "MongoDB", "Natural language processing", "Git"],
-    "LangChain Basics":                 ["Python", "Natural language processing", "Generative ai", "Git"],
-    "LangChain Advanced":               ["Python", "Natural language processing", "Generative ai", "MongoDB", "Git"],
-    "AI Agents":                        ["Python", "Generative ai", "Natural language processing", "AI", "Git"],
-    "Model Deployment":                 ["Python", "Django", "Docker", "Git"],
-    "Containerization":                 ["Python", "Docker", "DevOps", "Git"],
-    "MLOps Basics":                     ["Python", "DevOps", "Docker", "Git"],
-    "End-to-End AI Project":            ["Python", "Django", "React", "MongoDB", "Git"],
-    "Frontend Integration":             ["Python", "React", "Django", "Git"],
-    "Testing AI Applications":          ["Python", "playwright Automation", "Software Testing", "Git"],
-    "Performance Optimization":         ["Python", "TensorFlow", "ML", "Git"],
-    "Project Documentation":            ["Python", "Git"],
-    "Code Review & Refactoring":        ["Python", "Git"],
-    "Project Presentation & Summary":   ["Python", "AI", "ML", "Git"],
+    "AI & ML Foundations":              ["Python", "Machine learning", "AI"],
+    "Generative AI Foundations":        ["Python", "Generative ai", "AI"],
+    "Generative Models":                ["Python", "Generative ai", "ML", "TensorFlow"],
+    "Math Foundations":                 ["Python", "Statistical analysis", "Numpy"],
+    "Deep Learning Foundations":        ["Python", "TensorFlow", "Keras", "ML"],
+    "CNNs":                             ["Python", "TensorFlow", "Keras", "computer vision"],
+    "Sequence Models":                  ["Python", "TensorFlow", "Keras", "Natural language processing"],
+    "Deep Learning Tools":              ["Python", "TensorFlow", "PyTorch", "Keras"],
+    "Deep Learning Practice":           ["Python", "TensorFlow", "Keras", "ML"],
+    "Deep Learning Assessment":         ["Python", "TensorFlow", "PyTorch", "ML"],
+    "VAE Foundations":                  ["Python", "TensorFlow", "Keras", "ML"],
+    "VAE":                              ["Python", "TensorFlow", "Keras", "Generative ai"],
+    "VAE Applications":                 ["Python", "TensorFlow", "Generative ai"],
+    "VAE Security Applications":        ["Python", "TensorFlow", "ML"],
+    "VAE Tools":                        ["Python", "TensorFlow", "PyTorch"],
+    "VAE Assessment":                   ["Python", "TensorFlow", "ML"],
+    "GAN Foundations":                  ["Python", "TensorFlow", "Keras", "Generative ai"],
+    "GAN Training":                     ["Python", "TensorFlow", "Keras", "Generative ai"],
+    "GANs":                             ["Python", "TensorFlow", "Keras", "Generative ai"],
+    "GAN Applications":                 ["Python", "TensorFlow", "Generative ai", "computer vision"],
+    "Transformers":                     ["Python", "TensorFlow", "Natural language processing", "Generative ai"],
+    "Transformers Assessment":          ["Python", "TensorFlow", "Natural language processing"],
+    "LLM Foundations":                  ["Python", "Natural language processing", "Generative ai", "AI"],
+    "LLMs":                             ["Python", "Natural language processing", "Generative ai", "TensorFlow"],
+    "Hugging Face":                     ["Python", "Natural language processing", "TensorFlow", "Generative ai"],
+    "Fine-tuning LLMs":                 ["Python", "Natural language processing", "Generative ai", "PyTorch"],
+    "Prompt Engineering":               ["Python", "Generative ai", "Natural language processing", "AI"],
+    "RAG Foundations":                  ["Python", "Natural language processing", "Generative ai", "AI"],
+    "RAG Implementation":               ["Python", "Natural language processing", "Generative ai", "MongoDB"],
+    "Vector Databases":                 ["Python", "MongoDB", "Natural language processing"],
+    "LangChain Basics":                 ["Python", "Natural language processing", "Generative ai"],
+    "LangChain Advanced":               ["Python", "Natural language processing", "Generative ai", "MongoDB"],
+    "AI Agents":                        ["Python", "Generative ai", "Natural language processing", "AI"],
+    "Model Deployment":                 ["Python", "Django", "Docker"],
+    "Containerization":                 ["Python", "Docker", "DevOps"],
+    "MLOps Basics":                     ["Python", "DevOps", "Docker"],
+    "End-to-End AI Project":            ["Python", "Django", "React", "MongoDB"],
+    "Frontend Integration":             ["Python", "React", "Django"],
+    "Testing AI Applications":          ["Python", "playwright Automation", "Software Testing"],
+    "Performance Optimization":         ["Python", "TensorFlow", "ML"],
+    "Project Documentation":            ["Python"],
+    "Code Review & Refactoring":        ["Python"],
+    "Project Presentation & Summary":   ["Python", "AI", "ML"],
 }
 
 def get_skills_for_module(module: str) -> list:
     module_clean = module.replace("Note:", "").strip()
     if module_clean in MODULE_SKILLS:
-        return MODULE_SKILLS[module_clean]
-    module_lower = module_clean.lower()
-    for key, skills in MODULE_SKILLS.items():
-        if key.lower() in module_lower or module_lower in key.lower():
-            return skills
-    return ["Python", "Machine learning", "AI", "Git"]
+        skills = MODULE_SKILLS[module_clean]
+    else:
+        module_lower = module_clean.lower()
+        skills = ["Python", "Machine learning", "AI"]
+        for key, s_list in MODULE_SKILLS.items():
+            if key.lower() in module_lower or module_lower in key.lower():
+                skills = s_list
+                break
+    # Strictly ensure "Git" is never included
+    return [s for s in skills if s.lower() != "git"]
 
 
 # ─────────────────────────────────────────────
@@ -129,23 +134,29 @@ def load_entries(excel_path: str) -> list:
 #  SKILLS SELECTION
 # ─────────────────────────────────────────────
 def _select_skills(page, skills: list):
+    input_box = page.locator(".react-select__input-container input, input[id*='react-select']").first
     for skill in skills:
         try:
-            skills_input = page.locator(".react-select__input-container input, input[id*='react-select']").first
-            skills_input.click()
-            skills_input.fill("")
-            skills_input.type(skill, delay=25)
-            time.sleep(0.35)
-            
-            # Find matching option
-            opt = page.locator(".react-select__option, [class*='-option']").filter(has_text=f"^{skill}$").first
-            if not opt.count():
-                opt = page.locator(".react-select__option, [class*='-option']").filter(has_text=skill).first
-            opt.click(timeout=3000)
+            # Click input to focus — NEVER call fill("") or backspace as that deletes previous pills!
+            input_box.click()
             time.sleep(0.2)
+            input_box.press_sequentially(skill, delay=25)
+            time.sleep(0.35)
+
+            # Match exact option by regex
+            opt = page.locator(".react-select__option").filter(
+                has_text=re.compile(rf"^\s*{re.escape(skill)}\s*$", re.IGNORECASE)
+            ).first
+
+            if opt.count() > 0:
+                opt.click()
+            else:
+                page.keyboard.press("Enter")
+
+            time.sleep(0.25)
             print(f"      🏷️  {skill}")
-        except Exception:
-            # Fallback escape if dropdown didn't match
+        except Exception as e:
+            print(f"   ⚠️  Skill '{skill}' skipped: {e}")
             page.keyboard.press("Escape")
             time.sleep(0.1)
 
